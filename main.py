@@ -11,6 +11,7 @@ from astroquery.jplhorizons import Horizons
 from timezonefinder import TimezoneFinder
 
 from utils.interval_type import IntervalType
+from utils.time_utils import current_milli_time
 
 lat = 44.4268
 lng = 26.1025
@@ -342,6 +343,51 @@ def compute_ra_dec_score(ra, dec):
             file.write(f"================ SCORE:{score}\n")
             file.write("\n")
 
+def compute_constellations_scores():
+    timezone = get_location_timezone(lat, lng)
+    bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
+
+    astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
+    constellations = read_constellations("constellations.json")
+    output_file = "visibility_results.txt"
+
+    mins = IntervalType.THREE_HOUR
+    datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
+
+    constellations_scores = {}
+
+    with open(output_file, "w") as file:
+        file.write(f"Master scores for tonight:\n\n")
+        start_timestamp = current_milli_time()
+
+        for constellation, brightest_star in constellations:
+            star_coord = SkyCoord.from_name(brightest_star)
+            master_score = 0
+            for dt in datetime_list:
+                attributes = compute_ra_dec_attributes(dt, bucharest_location, star_coord.ra, star_coord.dec)
+                score = compute_target_potential_score(attributes)
+                master_score += score
+                # s_date_time = f"At datetime: {str(dt.astimezone(tz=timezone))[:-6]}"
+                # s_target = " - Andromeda Galaxy has the following attributes: \n"
+                #
+                # file.write(s_date_time)
+                # file.write(s_target)
+                # for key, value in attributes.items():
+                #     file.write(f"{key}: {value}\n")
+                # file.write(f"================ SCORE:{score}\n")
+                # file.write("\n")
+            constellations_scores[brightest_star] = master_score
+
+        sorted_constellations_scores = dict(sorted(constellations_scores.items(), key=lambda item: item[1]))
+
+        end_timestamp = current_milli_time()
+
+        for star, master_sc in constellations_scores.items():
+            file.write(f"Star: {star}: Score {master_sc}\n")
+
+        file.write(f"\nFinished computation in {(end_timestamp-start_timestamp)/1000} seconds.")
+
+
 def compute_constellations_validity():
     timezone = get_location_timezone(lat, lng)
     astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
@@ -368,7 +414,7 @@ def compute_constellations_validity():
 
 def main():
     andromeda_ra, andromeda_dec = "0h42m44s", "+41d16m9s"
-    compute_ra_dec_score(andromeda_ra, andromeda_dec)
+    compute_constellations_scores()
     # test_attribute_computation()
 
 

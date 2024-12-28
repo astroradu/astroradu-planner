@@ -1,68 +1,8 @@
-At datetime: 2024-12-26 19:00:00 - Andromeda Galaxy has the following attributes: 
-target_alt: 84.81524933789404 deg
-target_az: 236.42139769069607 deg
-target_visible: True
-is_target_above_25_degree: True
-is_target_in_10_degrees_of_zenith: True
-is_target_in_30_degrees_of_zenith: True
-is_target_in_45_degrees_of_zenith: True
-moon_alt: -57.95074921690502 deg
-moon_az: 309.90870570105966 deg
-moon_phase: 17.35609
-is_moon_visible: False
-is_moon_phase_acceptable: True
-is_moon_in_90_degrees: True
-is_moon_in_180_degrees: True
-================ SCORE:5
-
-At datetime: 2024-12-26 22:00:00 - Andromeda Galaxy has the following attributes: 
-target_alt: 53.21742159348891 deg
-target_az: 283.6346936983523 deg
-target_visible: True
-is_target_above_25_degree: True
-is_target_in_10_degrees_of_zenith: False
-is_target_in_30_degrees_of_zenith: False
-is_target_in_45_degrees_of_zenith: True
-moon_alt: -62.53337574198816 deg
-moon_az: 37.11455893286597 deg
-moon_phase: 16.45567
-is_moon_visible: False
-is_moon_phase_acceptable: True
-is_moon_in_90_degrees: False
-is_moon_in_180_degrees: False
-================ SCORE:3
-
-At datetime: 2024-12-27 01:00:00 - Andromeda Galaxy has the following attributes: 
-target_alt: 24.01325717792109 deg
-target_az: 305.2590023104538 deg
-target_visible: True
-is_target_above_25_degree: False
-is_target_in_10_degrees_of_zenith: False
-is_target_in_30_degrees_of_zenith: False
-is_target_in_45_degrees_of_zenith: False
-moon_alt: -35.762161378566724 deg
-moon_az: 85.97798662908323 deg
-moon_phase: 15.57291
-is_moon_visible: False
-is_moon_phase_acceptable: True
-is_moon_in_90_degrees: False
-is_moon_in_180_degrees: False
-================ SCORE:0
-
-At datetime: 2024-12-27 04:00:00 - Andromeda Galaxy has the following attributes: 
-target_alt: 2.636050565774718 deg
-target_az: 331.89071936129386 deg
-target_visible: True
-is_target_above_25_degree: False
-is_target_in_10_degrees_of_zenith: False
-is_target_in_30_degrees_of_zenith: False
-is_target_in_45_degrees_of_zenith: False
-moon_alt: -6.034846847701518 deg
-moon_az: 115.50491382831254 deg
-moon_phase: 14.70843
-is_moon_visible: False
-is_moon_phase_acceptable: True
-is_moon_in_90_degrees: False
-is_moon_in_180_degrees: False
-================ SCORE:0
-
+---------  -------------  -------------  --  --  --------  --------  --  -  -  -------------------  ---------  -------------  -------------  -----  -----  -
+NGC     1  00 07 15.8562  +27 42 29.020  14  14    0.7937    0.6646  90  C  O  2020yCat.1350....0G  NGC     1  00 07 15.8562  +27 42 29.020  0.76   0.578  1
+NGC     2  00 07 17.1156  +27 40 42.034  14  14    1.1368    0.9373  90  C  O  2020yCat.1350....0G  NGC     2  00 07 17.1156  +27 40 42.034  0.673  0.35   1
+NGC     3  00 07 16.7979  +08 18 05.976  14  14    4.6093    3.4723  90  C  O  2020yCat.1350....0G  NGC     3  00 07 16.7979  +08 18 05.976  0.687  0.439  1
+NGC     4  00 07 24.4     +08 22 30       5   5  nan       nan        0  D  O  2003A&A...412...45P  NGC     4  00 07 24.4     +08 22 30      0.52   0.24   1
+NGC     5  00 07 48.8659  +35 21 44.143  14  14    1.5303    1.1434  90  C  O  2020yCat.1350....0G  NGC     5  00 07 48.8659  +35 21 44.143  0.563  0.417  1
+NGC     7  00 08 20.96    -29 54 54.0     6   6  nan       nan        0  C  O  2020MNRAS.494.1784A  NGC     7  00 08 20.96    -29 54 54.0    2.57   0.54   1
+---------  -------------  -------------  --  --  --------  --------  --  -  -  -------------------  ---------  -------------  -------------  -----  -----  -

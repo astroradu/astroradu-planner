@@ -1,5 +1,5 @@
-from datetime import datetime
+import time
 
-import pytz
-from timezonefinder import TimezoneFinder
 
+def current_milli_time():
+    return round(time.time() * 1000)
