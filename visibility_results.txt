@@ -1,48 +1,68 @@
 At datetime: 2024-12-26 19:00:00 - Andromeda Galaxy has the following attributes: 
-target_visible: True
-is_target_above_25_degree: True
-is_target_close_to_zenith: True
 target_alt: 84.81524933789404 deg
 target_az: 236.42139769069607 deg
+target_visible: True
+is_target_above_25_degree: True
+is_target_in_10_degrees_of_zenith: True
+is_target_in_30_degrees_of_zenith: True
+is_target_in_45_degrees_of_zenith: True
 moon_alt: -57.95074921690502 deg
 moon_az: 309.90870570105966 deg
 moon_phase: 17.35609
-moon_brightness_below_30: True
-moon_farther_than_90_deg_az: False
+is_moon_visible: False
+is_moon_phase_acceptable: True
+is_moon_in_90_degrees: True
+is_moon_in_180_degrees: True
+================ SCORE:5
 
 At datetime: 2024-12-26 22:00:00 - Andromeda Galaxy has the following attributes: 
-target_visible: True
-is_target_above_25_degree: True
-is_target_close_to_zenith: False
 target_alt: 53.21742159348891 deg
 target_az: 283.6346936983523 deg
+target_visible: True
+is_target_above_25_degree: True
+is_target_in_10_degrees_of_zenith: False
+is_target_in_30_degrees_of_zenith: False
+is_target_in_45_degrees_of_zenith: True
 moon_alt: -62.53337574198816 deg
 moon_az: 37.11455893286597 deg
 moon_phase: 16.45567
-moon_brightness_below_30: True
-moon_farther_than_90_deg_az: True
+is_moon_visible: False
+is_moon_phase_acceptable: True
+is_moon_in_90_degrees: False
+is_moon_in_180_degrees: False
+================ SCORE:3
 
 At datetime: 2024-12-27 01:00:00 - Andromeda Galaxy has the following attributes: 
-target_visible: True
-is_target_above_25_degree: False
-is_target_close_to_zenith: False
 target_alt: 24.01325717792109 deg
 target_az: 305.2590023104538 deg
+target_visible: True
+is_target_above_25_degree: False
+is_target_in_10_degrees_of_zenith: False
+is_target_in_30_degrees_of_zenith: False
+is_target_in_45_degrees_of_zenith: False
 moon_alt: -35.762161378566724 deg
 moon_az: 85.97798662908323 deg
 moon_phase: 15.57291
-moon_brightness_below_30: True
-moon_farther_than_90_deg_az: True
+is_moon_visible: False
+is_moon_phase_acceptable: True
+is_moon_in_90_degrees: False
+is_moon_in_180_degrees: False
+================ SCORE:0
 
 At datetime: 2024-12-27 04:00:00 - Andromeda Galaxy has the following attributes: 
-target_visible: True
-is_target_above_25_degree: False
-is_target_close_to_zenith: False
 target_alt: 2.636050565774718 deg
 target_az: 331.89071936129386 deg
+target_visible: True
+is_target_above_25_degree: False
+is_target_in_10_degrees_of_zenith: False
+is_target_in_30_degrees_of_zenith: False
+is_target_in_45_degrees_of_zenith: False
 moon_alt: -6.034846847701518 deg
 moon_az: 115.50491382831254 deg
 moon_phase: 14.70843
-moon_brightness_below_30: True
-moon_farther_than_90_deg_az: True
+is_moon_visible: False
+is_moon_phase_acceptable: True
+is_moon_in_90_degrees: False
+is_moon_in_180_degrees: False
+================ SCORE:0
 
