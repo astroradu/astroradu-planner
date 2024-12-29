@@ -14,6 +14,7 @@ import os
 from astroquery.jplhorizons import Horizons
 from timezonefinder import TimezoneFinder
 
+from aladin import aladin
 from utils.interval_type import IntervalType
 from utils.time_utils import current_milli_time, current_milli_time_formatted, format_mills
 
@@ -418,6 +419,7 @@ def compute_constellations_validity():
 
 
 def compute_scores():
+    aladin()
     brightness = 3
 
     timezone = get_location_timezone(lat, lng)
@@ -440,13 +442,15 @@ def compute_scores():
     ic_df = pd.read_csv("data/catalog_ic.csv")
     combined_df = pd.concat([ngc_df, ic_df], ignore_index=True)
 
-    timestamps.append(f"Starting iteration...\n")
-
     night_segment_size = len(datetime_list)
     table_size = len(combined_df.index)
 
     current_row = 0
     current_dt = 0
+
+    timestamps.append(f"Will iterate through {table_size} NGC and SH2 valid objects...\n")
+    timestamps.append(f"...with {night_segment_size} night observation points...\n\n")
+    timestamps.append(f"Starting iteration...\n")
 
     for index, row in combined_df.iterrows():
         current_row += 1

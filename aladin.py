@@ -98,7 +98,7 @@ def get_arp_objects_from_vizier():
     ]
 
     if check_if_null_or_empty(output_arp_file):
-        catalogs_arp = Vizier(row_limit=40).get_catalogs(catalogue_id_arp)
+        catalogs_arp = Vizier(row_limit=-1).get_catalogs(catalogue_id_arp)
         table_arp = (catalogs_arp[1]).to_pandas()
         filtered_table = table_arp[column_filter]
         table_size = len(filtered_table.index)
@@ -144,7 +144,7 @@ def get_ngc_and_ic_objects_from_vizier():
     if not check_if_null_or_empty(output_ngc_file) and not check_if_null_or_empty(output_ic_file):
         return None
 
-    catalogs_ngc = Vizier(row_limit=300).get_catalogs(catalogue_id_ngc)
+    catalogs_ngc = Vizier(row_limit=-1).get_catalogs(catalogue_id_ngc)
     table_ngc = (catalogs_ngc[0]).to_pandas()
     filtered_table = table_ngc[column_filter]
     table_size = len(filtered_table.index)
@@ -204,7 +204,7 @@ def get_sharpless_objects_from_vizier():
     if not check_if_null_or_empty(output_sh_file):
         return None
 
-    catalog_sh = Vizier(row_limit=40).get_catalogs(catalogue_sh_ngc)
+    catalog_sh = Vizier(row_limit=-1).get_catalogs(catalogue_sh_ngc)
     table_sh = (catalog_sh[0]).to_pandas()
     filtered_table = table_sh[column_filter]
     table_size = len(filtered_table.index)
