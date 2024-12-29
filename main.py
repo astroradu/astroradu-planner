@@ -1,3 +1,7 @@
+from collections import OrderedDict
+from operator import itemgetter
+
+import pandas as pd
 from astropy.coordinates import EarthLocation, SkyCoord, AltAz, get_moon, get_body
 from astropy.time import Time
 from astropy import units as u
@@ -11,7 +15,7 @@ from astroquery.jplhorizons import Horizons
 from timezonefinder import TimezoneFinder
 
 from utils.interval_type import IntervalType
-from utils.time_utils import current_milli_time
+from utils.time_utils import current_milli_time, current_milli_time_formatted, format_mills
 
 lat = 44.4268
 lng = 26.1025
@@ -239,11 +243,11 @@ def compute_target_potential_score(attributes):
     the moon position. Narrowband signal acquisition is recommended during full moon to lower the effects of moon light.
     """
     if (
-        not attributes["target_visible"] or
-        not attributes["is_target_above_25_degree"] or
-        (
-            attributes["is_moon_visible"] and not attributes["is_moon_phase_acceptable"]
-        )
+            not attributes["target_visible"] or
+            not attributes["is_target_above_25_degree"] or
+            (
+                    attributes["is_moon_visible"] and not attributes["is_moon_phase_acceptable"]
+            )
     ):
         return 0
 
@@ -343,6 +347,7 @@ def compute_ra_dec_score(ra, dec):
             file.write(f"================ SCORE:{score}\n")
             file.write("\n")
 
+
 def compute_constellations_scores():
     timezone = get_location_timezone(lat, lng)
     bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
@@ -385,7 +390,7 @@ def compute_constellations_scores():
         for star, master_sc in constellations_scores.items():
             file.write(f"Star: {star}: Score {master_sc}\n")
 
-        file.write(f"\nFinished computation in {(end_timestamp-start_timestamp)/1000} seconds.")
+        file.write(f"\nFinished computation in {(end_timestamp - start_timestamp) / 1000} seconds.")
 
 
 def compute_constellations_validity():
@@ -412,10 +417,84 @@ def compute_constellations_validity():
             #         file.write(line + "\n")
 
 
+def compute_scores():
+    brightness = 3
+
+    timezone = get_location_timezone(lat, lng)
+    astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
+
+    timestamp_file = "data/timestamps.txt"
+    score_file = "data/scores.txt"
+
+    mins = IntervalType.HOUR
+
+    datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
+    bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
+
+    begin_timestamp = current_milli_time()
+
+    resultDictionary = {}
+    timestamps = [f"Reading tables: {format_mills(begin_timestamp)}\n"]
+
+    ngc_df = pd.read_csv("data/catalog_ngc.csv")
+    ic_df = pd.read_csv("data/catalog_ic.csv")
+    combined_df = pd.concat([ngc_df, ic_df], ignore_index=True)
+
+    timestamps.append(f"Starting iteration...\n")
+
+    night_segment_size = len(datetime_list)
+    table_size = len(combined_df.index)
+
+    current_row = 0
+    current_dt = 0
+
+    for index, row in combined_df.iterrows():
+        current_row += 1
+        current_dt = 0
+
+        if row['bri'] != brightness:
+            pass
+
+        identifier = f"{row['cat']}{row['name']}"
+
+        target_score = 0
+
+        for dt in datetime_list:
+            current_dt += 1
+            timestamps.append(
+                f"Computing attributes for {identifier} at {dt.time()}: {current_milli_time_formatted()}\n")
+            attributes = compute_ra_dec_attributes(dt, bucharest_location, row['ra'], row['dec'])
+            timestamps.append(
+                f"Computing scores for {identifier} at {dt.time()}: {current_milli_time_formatted()}\n")
+            score = compute_target_potential_score(attributes)
+            timestamps.append(f"Resulting attributes for {dt.time()}:\n")
+            for key, value in attributes.items():
+                timestamps.append(
+                    f"{key} : {value}\n")
+            timestamps.append("\n")
+            target_score += score
+            print(f"{current_row}/{table_size} | {current_dt}/{night_segment_size}")
+
+        timestamps.append(f"Writing master score for {identifier}: {current_milli_time_formatted()}\n\n")
+        resultDictionary[f"{identifier}"] = target_score
+
+    timestamps.append(f"Finishing...\n\n")
+    finish_timestamp = current_milli_time()
+    diff = (finish_timestamp - begin_timestamp) // 1000
+    timestamps.append(f"Computation took ... {diff}s\n")
+    sorted_dict = OrderedDict(sorted(resultDictionary.items(), key=itemgetter(1), reverse=True))
+
+    with open(score_file, "w") as file:
+        for key, value in sorted_dict.items():
+            file.write(f"{key}: {value}" + "\n")
+
+    with open(timestamp_file, "w") as file:
+        for line in timestamps:
+            file.write(line)
+
+
 def main():
-    andromeda_ra, andromeda_dec = "0h42m44s", "+41d16m9s"
-    compute_constellations_scores()
-    # test_attribute_computation()
+    compute_scores()
 
 
 main()

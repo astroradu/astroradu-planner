@@ -1,0 +1,1 @@
+give a certain target as param and let the program compute the best months of next calendaristic year to image.
