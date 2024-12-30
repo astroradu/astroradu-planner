@@ -2,24 +2,19 @@ from collections import OrderedDict
 from operator import itemgetter
 
 import pandas as pd
-from astropy.coordinates import EarthLocation, SkyCoord, AltAz
+from astropy.coordinates import EarthLocation, SkyCoord, AltAz, get_moon, get_body
 from astropy.time import Time
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from astropy import units as u
 from datetime import datetime, time, timedelta
 import ephem
 import pytz
 import json
 import os
-import asyncio
 
+from astroquery.jplhorizons import Horizons
 from timezonefinder import TimezoneFinder
 
 from aladin import aladin
-from object.object_attributes import compute_object_attributes
-from object.object_attributes_old import compute_object_attributes_old
-from object.object_score import compute_object_score
-from object.object_score_old import compute_object_score_old
 from utils.interval_type import IntervalType
 from utils.time_utils import current_milli_time, current_milli_time_formatted, format_mills
 
@@ -57,10 +52,10 @@ def get_location_timezone(latitude, longitude):
 def convert_to_utc(date_time, timezone):
     current_time = date_time.astimezone(pytz.timezone(timezone.zone)).strftime(datetime_format)
     utc_time = date_time.astimezone(pytz.utc).strftime(datetime_format)
-    # print("===============================")
-    # print("Converting to UTC:")
-    # print("Input time: " + current_time)
-    # print("UTC time: " + utc_time)
+    print("===============================")
+    print("Converting to UTC:")
+    print("Input time: " + current_time)
+    print("UTC time: " + utc_time)
     return utc_time
 
 
@@ -71,8 +66,8 @@ def get_utc_midnight_for_tonight(timezone):
     today = datetime.now(tz)
     midnight = tz.localize(datetime.combine(today, time(0, 0)), is_dst=None)
     midnight_utc = convert_to_utc(midnight, timezone)
-    # print("===============================")
-    # print("Computed UTC Midnight: " + midnight_utc)
+    print("===============================")
+    print("Computed UTC Midnight: " + midnight_utc)
     return midnight_utc
 
 
@@ -90,11 +85,11 @@ def calculate_astronomical_night(latitude, longitude, elevation, timezone):
     sunset = observer.previous_setting(ephem.Sun())  # Sunset
     sunrise = observer.next_rising(ephem.Sun())  # Sunrise
 
-    # print("===============================")
-    # print("Computed Upcoming Sunset: ")
-    # print(ephem.localtime(sunset))
-    # print("Computed Upcoming Sunrise: ")
-    # print(ephem.localtime(sunrise))
+    print("===============================")
+    print("Computed Upcoming Sunset: ")
+    print(ephem.localtime(sunset))
+    print("Computed Upcoming Sunrise: ")
+    print(ephem.localtime(sunrise))
 
     # -6=civil twilight, -12=nautical, -18=astronomical
     observer.horizon = '-18'
@@ -108,11 +103,11 @@ def calculate_astronomical_night(latitude, longitude, elevation, timezone):
     astronomical_sunset_local = ephem.localtime(astronomical_sunset)
     astronomical_sunrise_local = ephem.localtime(astronomical_sunrise)
 
-    # print("===============================")
-    # print("Computed Upcoming Astronomical Sunset: ")
-    # print(astronomical_sunset_local)
-    # print("Computed Upcoming Astronomical Sunrise: ")
-    # print(astronomical_sunrise_local)
+    print("===============================")
+    print("Computed Upcoming Astronomical Sunset: ")
+    print(astronomical_sunset_local)
+    print("Computed Upcoming Astronomical Sunrise: ")
+    print(astronomical_sunrise_local)
 
     return astronomical_sunset_utc, astronomical_sunrise_utc
 
@@ -142,8 +137,8 @@ def generate_time_interval(start_date, end_date, mins):
     if interval_in_minutes / mins > 48:
         raise ValueError("The interval is too large to compute.")
 
-    # print("Rounded start date: ", rounded_start_date)
-    # print("Rounded end date: ", rounded_end_date)
+    print("Rounded start date: ", rounded_start_date)
+    print("Rounded end date: ", rounded_end_date)
 
     interval_list = []
     current_time = rounded_start_date
@@ -178,6 +173,52 @@ def clear_file(f):
     with open(f, "w") as file:
         file.write("")
     return file
+
+
+def target_close_to_zenith(target_alt_az, threshold):
+    return abs(target_alt_az.alt - 90 * u.deg) <= threshold
+
+
+def compute_ra_dec_attributes(dt, loc, ra, dec):
+    observer_alt_az = AltAz(obstime=dt, location=loc)
+    target_coord = SkyCoord(ra=ra, dec=dec, frame='icrs')
+    target_alt_az = target_coord.transform_to(observer_alt_az)
+
+    moon_coord = get_body("moon", Time(dt), location=loc)
+    moon_alt_az = moon_coord.transform_to(observer_alt_az)
+
+    # ID 301 is Moon
+    moon_phase = Horizons(id='301', location=f"geo", epochs=Time(dt).jd).ephemerides()["illumination"][0]
+
+    azimuth_diff = abs(moon_alt_az.az - target_alt_az.az)
+
+    is_target_visible = target_alt_az.alt > 0 * u.deg
+    is_target_above_25_degree = target_alt_az.alt > 25 * u.deg
+    is_target_in_10_degrees_of_zenith = target_close_to_zenith(target_alt_az, 10 * u.deg)
+    is_target_in_30_degrees_of_zenith = target_close_to_zenith(target_alt_az, 30 * u.deg)
+    is_target_in_45_degrees_of_zenith = target_close_to_zenith(target_alt_az, 45 * u.deg)
+
+    is_moon_visible = moon_alt_az.alt > 0 * u.deg
+    is_moon_phase_acceptable = moon_phase < 30 or azimuth_diff > 90 * u.deg
+    is_moon_in_180_degrees = azimuth_diff <= 180 * u.deg
+
+    attributes = {
+        "target_alt": target_alt_az.alt,
+        "target_az": target_alt_az.az,
+        "target_visible": is_target_visible,
+        "is_target_above_25_degree": is_target_above_25_degree,
+        "is_target_in_10_degrees_of_zenith": is_target_in_10_degrees_of_zenith,
+        "is_target_in_30_degrees_of_zenith": is_target_in_30_degrees_of_zenith,
+        "is_target_in_45_degrees_of_zenith": is_target_in_45_degrees_of_zenith,
+        "moon_alt": moon_alt_az.alt,
+        "moon_az": moon_alt_az.az,
+        "moon_phase": moon_phase,
+        "is_moon_visible": is_moon_visible,
+        "is_moon_phase_acceptable": is_moon_phase_acceptable,
+        "is_moon_in_180_degrees": is_moon_in_180_degrees
+    }
+
+    return attributes
 
 
 def compute_target_potential_score(attributes):
@@ -263,7 +304,7 @@ def compute_bright_star_visibility():
 
     try:
 
-        # print("----")
+        print("----")
 
         mins = IntervalType.QUARTER
 
@@ -276,106 +317,105 @@ def compute_bright_star_visibility():
                     file.write(line + "\n")
 
     except ValueError as e:
-        pass
-        # print("Error:", e)
+        print("Error:", e)
 
 
-# def compute_ra_dec_score(ra, dec):
-#     timezone = get_location_timezone(lat, lng)
-#     bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
-#
-#     astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
-#
-#     output_file = "visibility_results.txt"
-#
-#     mins = IntervalType.THREE_HOUR
-#     datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
-#
-#     master_score = 0
-#
-#     with open(output_file, "w") as file:
-#         for dt in datetime_list:
-#             attributes = compute_ra_dec_attributes(dt, bucharest_location, ra, dec)
-#             score = compute_target_potential_score(attributes)
-#             master_score += score
-#             s_date_time = f"At datetime: {str(dt.astimezone(tz=timezone))[:-6]}"
-#             s_target = " - Andromeda Galaxy has the following attributes: \n"
-#
-#             file.write(s_date_time)
-#             file.write(s_target)
-#             for key, value in attributes.items():
-#                 file.write(f"{key}: {value}\n")
-#             file.write(f"================ SCORE:{score}\n")
-#             file.write("\n")
+def compute_ra_dec_score(ra, dec):
+    timezone = get_location_timezone(lat, lng)
+    bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
+
+    astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
+
+    output_file = "visibility_results.txt"
+
+    mins = IntervalType.THREE_HOUR
+    datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
+
+    master_score = 0
+
+    with open(output_file, "w") as file:
+        for dt in datetime_list:
+            attributes = compute_ra_dec_attributes(dt, bucharest_location, ra, dec)
+            score = compute_target_potential_score(attributes)
+            master_score += score
+            s_date_time = f"At datetime: {str(dt.astimezone(tz=timezone))[:-6]}"
+            s_target = " - Andromeda Galaxy has the following attributes: \n"
+
+            file.write(s_date_time)
+            file.write(s_target)
+            for key, value in attributes.items():
+                file.write(f"{key}: {value}\n")
+            file.write(f"================ SCORE:{score}\n")
+            file.write("\n")
 
 
-# def compute_constellations_scores():
-#     timezone = get_location_timezone(lat, lng)
-#     bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
-#
-#     astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
-#     constellations = read_constellations("constellations.json")
-#     output_file = "visibility_results.txt"
-#
-#     mins = IntervalType.THREE_HOUR
-#     datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
-#
-#     constellations_scores = {}
-#
-#     with open(output_file, "w") as file:
-#         file.write(f"Master scores for tonight:\n\n")
-#         start_timestamp = current_milli_time()
-#
-#         for constellation, brightest_star in constellations:
-#             star_coord = SkyCoord.from_name(brightest_star)
-#             master_score = 0
-#             for dt in datetime_list:
-#                 attributes = compute_ra_dec_attributes(dt, bucharest_location, star_coord.ra, star_coord.dec)
-#                 score = compute_target_potential_score(attributes)
-#                 master_score += score
-#                 # s_date_time = f"At datetime: {str(dt.astimezone(tz=timezone))[:-6]}"
-#                 # s_target = " - Andromeda Galaxy has the following attributes: \n"
-#                 #
-#                 # file.write(s_date_time)
-#                 # file.write(s_target)
-#                 # for key, value in attributes.items():
-#                 #     file.write(f"{key}: {value}\n")
-#                 # file.write(f"================ SCORE:{score}\n")
-#                 # file.write("\n")
-#             constellations_scores[brightest_star] = master_score
-#
-#         sorted_constellations_scores = dict(sorted(constellations_scores.items(), key=lambda item: item[1]))
-#
-#         end_timestamp = current_milli_time()
-#
-#         for star, master_sc in constellations_scores.items():
-#             file.write(f"Star: {star}: Score {master_sc}\n")
-#
-#         file.write(f"\nFinished computation in {(end_timestamp - start_timestamp) / 1000} seconds.")
+def compute_constellations_scores():
+    timezone = get_location_timezone(lat, lng)
+    bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
+
+    astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
+    constellations = read_constellations("constellations.json")
+    output_file = "visibility_results.txt"
+
+    mins = IntervalType.THREE_HOUR
+    datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
+
+    constellations_scores = {}
+
+    with open(output_file, "w") as file:
+        file.write(f"Master scores for tonight:\n\n")
+        start_timestamp = current_milli_time()
+
+        for constellation, brightest_star in constellations:
+            star_coord = SkyCoord.from_name(brightest_star)
+            master_score = 0
+            for dt in datetime_list:
+                attributes = compute_ra_dec_attributes(dt, bucharest_location, star_coord.ra, star_coord.dec)
+                score = compute_target_potential_score(attributes)
+                master_score += score
+                # s_date_time = f"At datetime: {str(dt.astimezone(tz=timezone))[:-6]}"
+                # s_target = " - Andromeda Galaxy has the following attributes: \n"
+                #
+                # file.write(s_date_time)
+                # file.write(s_target)
+                # for key, value in attributes.items():
+                #     file.write(f"{key}: {value}\n")
+                # file.write(f"================ SCORE:{score}\n")
+                # file.write("\n")
+            constellations_scores[brightest_star] = master_score
+
+        sorted_constellations_scores = dict(sorted(constellations_scores.items(), key=lambda item: item[1]))
+
+        end_timestamp = current_milli_time()
+
+        for star, master_sc in constellations_scores.items():
+            file.write(f"Star: {star}: Score {master_sc}\n")
+
+        file.write(f"\nFinished computation in {(end_timestamp - start_timestamp) / 1000} seconds.")
 
 
-# def compute_constellations_validity():
-#     timezone = get_location_timezone(lat, lng)
-#     astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
-#     constellations = read_constellations("constellations.json")
-#     output_file = "visibility_results.txt"
-#
-#     mins = IntervalType.QUARTER
-#
-#     datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
-#     bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
-#
-#     resultDictionary = {}
-#
-#     with open(output_file, "w") as file:
-#         for constellation, brightest_star in constellations[:1]:
-#             star_coord = SkyCoord.from_name(brightest_star)
-#
-#             # for dt in datetime_list:
-#             #     visibility_result = check_ra_dec_visibility(dt, bucharest_location, star_coord.ra, star_coord.dec)
-#             #     resultDictionary[constellation]
-#             #     for line in visible:
-#             #         file.write(line + "\n")
+def compute_constellations_validity():
+    timezone = get_location_timezone(lat, lng)
+    astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
+    constellations = read_constellations("constellations.json")
+    output_file = "visibility_results.txt"
+
+    mins = IntervalType.QUARTER
+
+    datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
+    bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
+
+    resultDictionary = {}
+
+    with open(output_file, "w") as file:
+        for constellation, brightest_star in constellations[:1]:
+            star_coord = SkyCoord.from_name(brightest_star)
+
+            # for dt in datetime_list:
+            #     visibility_result = check_ra_dec_visibility(dt, bucharest_location, star_coord.ra, star_coord.dec)
+            #     resultDictionary[constellation]
+            #     for line in visible:
+            #         file.write(line + "\n")
 
 
 def compute_scores():
@@ -427,7 +467,7 @@ def compute_scores():
             current_dt += 1
             timestamps.append(
                 f"Computing attributes for {identifier} at {dt.time()}: {current_milli_time_formatted()}\n")
-            attributes = compute_object_attributes(dt, bucharest_location, row['ra'], row['dec'])
+            attributes = compute_ra_dec_attributes(dt, bucharest_location, row['ra'], row['dec'])
             timestamps.append(
                 f"Computing scores for {identifier} at {dt.time()}: {current_milli_time_formatted()}\n")
             score = compute_target_potential_score(attributes)
@@ -457,54 +497,8 @@ def compute_scores():
             file.write(line)
 
 
-async def process_row_old(row, dt, location):
-    loop = asyncio.get_event_loop()
-    attributes = await loop.run_in_executor(None, compute_object_attributes_old, dt, location, row['ra'], row['dec'])
-    return await loop.run_in_executor(None, compute_object_score_old, attributes)
-
-async def process_row_new(row, dt, location):
-    loop = asyncio.get_event_loop()
-    attributes = await loop.run_in_executor(None, compute_object_attributes, dt, location, row['ra'], row['dec'])
-    return await loop.run_in_executor(None, compute_object_score, attributes)
-
-async def compute_scores_test():
-    # Example lat, lng, elev values
-    lat, lng, elev = 44.4268, 26.1025, 85  # Bucharest coordinates and elevation
-    timezone = get_location_timezone(lat, lng)
-    astronomical_sunset, astronomical_sunrise = calculate_astronomical_night(lat, lng, elev, timezone)
-    mins = IntervalType.HOUR
-
-    datetime_list = generate_time_interval(astronomical_sunset, astronomical_sunrise, mins.value)
-    bucharest_location = EarthLocation(lat=lat * u.deg, lon=lng * u.deg, height=elev * u.m)
-    dt = datetime_list[0]
-
-    ngc_df = pd.read_csv("data/catalog_ngc_test.csv")
-
-    mills1 = current_milli_time()
-    for index, row in ngc_df.iterrows():
-        attributes = compute_object_attributes(dt, bucharest_location, row['ra'], row['dec'])
-        compute_object_score(attributes)
-    new_mills1 = current_milli_time()
-    print(f"Finished computation with old algorithm in: {(new_mills1 - mills1)} mills.\n")
-
-    # Old algorithm
-    mills2 = current_milli_time()
-    tasks = [process_row_old(row, dt, bucharest_location) for index, row in ngc_df.iterrows()]
-    await asyncio.gather(*tasks)
-    new_mills2 = current_milli_time()
-    print(f"Finished computation with old algorithm in: {(new_mills2 - mills2)} mills.\n")
-
-    # New algorithm
-    mill3 = current_milli_time()
-    tasks = [process_row_new(row, dt, bucharest_location) for index, row in ngc_df.iterrows()]
-    await asyncio.gather(*tasks)
-    new_mill3 = current_milli_time()
-    print(f"Finished computation with new algorithm in: {(new_mill3 - mill3)} mills.\n")
-
-
 def main():
-    if __name__ == '__main__':
-        asyncio.run(compute_scores_test())
+    compute_scores()
 
 
 main()
